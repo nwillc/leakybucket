@@ -49,7 +49,7 @@ func (lb *LeakyBucket) Allow(at time.Time, amount decimal.Decimal) error {
 	if amount.GreaterThan(avail) {
 		return fmt.Errorf("%s greater than available %s", amount, avail)
 	}
-	lb.lockedAllow(amount, at)
+	lb.lockedSpend(amount, at)
 	return nil
 }
 
@@ -60,7 +60,7 @@ func (lb *LeakyBucket) lockedPeek(at time.Time) (decimal.Decimal, time.Time) {
 		ticks, remainder := ticks(lb.replenishmentRate, lb.lastAdjusted, at)
 		if ticks > 0 {
 			at = at.Add(-time.Duration(remainder) * time.Nanosecond)
-			lb.lockedAllow(decimal.NewFromInt(ticks).Mul(lb.replenishmentAmount).Neg(), at)
+			lb.lockedSpend(decimal.NewFromInt(ticks).Mul(lb.replenishmentAmount).Neg(), at)
 		} else {
 			at = lb.lastAdjusted
 		}
@@ -68,9 +68,9 @@ func (lb *LeakyBucket) lockedPeek(at time.Time) (decimal.Decimal, time.Time) {
 	return lb.limit.Sub(lb.spent), at
 }
 
-// lockedAllow adjusts the spend, up or down, by a given amount. This function assumes the lock is
+// lockedSpend adjusts the spend, up or down, by a given amount. This function assumes the lock is
 // already acquired and the calculations can be safely performed.
-func (lb *LeakyBucket) lockedAllow(amount decimal.Decimal, at time.Time) {
+func (lb *LeakyBucket) lockedSpend(amount decimal.Decimal, at time.Time) {
 	adjusted := lb.spent.Add(amount)
 	if adjusted.LessThan(decimal.Zero) {
 		adjusted = decimal.Zero
